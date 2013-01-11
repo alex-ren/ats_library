@@ -12,22 +12,24 @@
 CWD=$(shell pwd)
 
 MV  := mv -f
-RM  := rm -f
+RM  := rm -rf
 SED := sed
 
 # todo
 # modify ZLOG_PATH according to your environment
-ZLOG_PATH := /home/atsuser/programs/zlog-1.2.4/install
+# ZLOG_PATH := /home/atsuser/programs/zlog-1.2.4/install
+ZLOG_PATH := /home/grad2/aren/programs/zlog-1.2.4/zlog_install
 ZLOG_INC := $(ZLOG_PATH)/include
 ZLOG_LIB := $(ZLOG_PATH)/lib
 
-
-
 #==================================
 
-ifndef ATSHOME
-$(error ATSHOME is undefined)
-endif
+# Global check of environment, uncomment the following if necessary.
+# ifndef XXX
+# $(error XXX is undefined)
+# endif
+
+XREF="XREF"
 
 ATSUSRQ="$(ATSHOME)"
 ATSLIBQ=$(ATSUSRQ)
@@ -43,23 +45,39 @@ ATSCC=$(ATSUSRQ)/bin/atscc
 ATSOPT=$(ATSUSRQ)/bin/atsopt
 
 # todo
-# This is the include directory for compiling ats source files.
+# The flag is for the "include" directory for compiling ats source files.
+# This is needed by atscc
+# Add more if nessary
 ATSCCFLAGS=-IATS $(CWD)/SATS
 
+# "include" directory for compilation of C code generated from ATS code. 
+# This is needed by gcc.
 ATS_CC_INC=-I $(ATSRUNTIME) -I $(ATSUSRQ) -I $(CWD)
 
+#= convention of generated file name =================================
+
+# e.g.
+# xx.sats -> xx_sats.c
+# xx.dats -> xx_dats.c
 define atscname
 $(patsubst %.dats,%_dats.c,$(patsubst %.sats,%_sats.c,$1))
 endef
 
-#= general macro =================================
+# e.g.
+# xx.sats -> xx_sats.html
+# xx.dats -> xx_dats.html
+define atshtmlname
+$(patsubst %.dats,%_dats.html,$(patsubst %.sats,%_sats.html,$1))
+endef
 
+#= general macro =================================
+# todo
+# The compiler of C/C++. If not specified explicitly here, makefile
+# would use the default.
 #CC=gcc
 #CXX=g++
 
-######
-
-# file extension for dependency files
+# file extension for dependency files ============
 depgcc := depgcc
 depdats := depdats
 depsats := depsats
@@ -72,7 +90,7 @@ source-to-object = $(subst .c,.o,$(filter %.c,$1)) \
                    $(subst .sats,_sats.o,$(filter %.sats,$1)) \
                    $(subst .dats,_dats.o,$(filter %.dats,$1))
 
-
+# This function is called inside the included module.mk
 # $(subdirectory)
 subdirectory = $(patsubst %/module.mk,%,    \
                  $(word                     \
@@ -127,12 +145,14 @@ endef
 
 # Collect information from each module in these four variables.
 # Initialize them here as simple variables
+# targets
+ats_zlog_lib     := # leave empty
+ats_zlog_program := # leave empty
+zlog_test        := # leave empty
 
-ats_zlog_lib    :=
-ats_zlog_program   :=
-zlog_test   :=
-sources   :=
+sources          := # leave empty
 
+# ==================================
 
 objects      = $(call source-to-object,$(sources))
 
@@ -147,6 +167,12 @@ sats_c_files = $(call atscname,$(sats_files))
 dats_c_files = $(call atscname,$(dats_files))
 ats_c_files = $(sats_c_files) $(dats_c_files)
 
+# html file
+sats_html_files = $(call atshtmlname,$(sats_files))
+dats_html_files = $(call atshtmlname,$(dats_files))
+ats_html_files = $(sats_html_files) $(dats_html_files)
+
+# obj file
 ats_obj_files = $(subst .c,.o,$(ats_c_files))
 
 # dependency files
@@ -166,14 +192,16 @@ dependencies = $(sats_dep) $(dats_dep) $(cxx_dep) $(c_dep) $(sats_c_dep) $(dats_
 # =========================================
 
 # todo
-# add more directory as needed
+# Add more directory to the varaible include_dirs as needed.
+# It will affect the "include" directory for compiling C source files.
 include_dirs := $(CWD)/CATS $(ZLOG_INC)
 CPPFLAGS  += $(addprefix -I ,$(include_dirs))
-CFLAGS    += -O0
-CXXFLAGS  += -O0
+CFLAGS    += -O0  # no optimization
+CXXFLAGS  += -O0  # no optimization
 # vpath %.h $(include_dirs)
 
 
+# Target "all" has to appear here before eval
 all:
 # todo add more xx.mk here
 include MISC/try_zlog/module.mk
@@ -181,11 +209,13 @@ include ./module.mk  # for libats_zlog.a
 include TEST/module.mk # for building testing program
 
 # The following must be after the "include".
-
 # =targets ========================================
 
 .PHONY: all
 all: $(ats_zlog_lib) $(ats_zlog_program)
+
+.PHONY: html
+html: $(ats_html_files)
 
 .PHONY: zlog_test
 zlog_test: $(zlog_test)
@@ -200,9 +230,6 @@ test: $(ats_zlog_program)
 showpath: check-env
 	@echo "LD_LIBRARY_PATH=\$${LD_LIBRARY_PATH}:$(ZLOG_LIB); export LD_LIBRARY_PATH"
 
-.PHONY: cleanall
-cleanall: clean
-
 .PHONY: clean
 clean:
 	$(RM) $(objects) \
@@ -211,6 +238,26 @@ clean:
         $(zlog_test) \
         $(dependencies) \
         $(ats_c_files)
+
+.PHONY: cleanall
+cleanall: clean
+	$(RM) $(ats_html_files)
+	find ./ -name $(XREF) | xargs $(RM)
+
+.PHONY: check-atsenv
+check-atsenv:
+ifndef ATSHOME
+	$(error ATSHOME is undefined.)
+endif
+ifeq ($(wildcard $(ATSHOME)/bin/atscc), )
+	$(error ATSHOME is not correct.)
+endif
+
+ifneq "$(MAKECMDGOALS)" "clean"
+  ifneq "$(MAKECMDGOALS)" "cleanall"
+    include $(dependencies)
+  endif
+endif
 
 .PHONY: check-env
 check-env:
@@ -250,9 +297,39 @@ $(dats_c_files): $(call atscname,%.dats): %.dats
 
 #=========================
 
+# You should see here the usage of the | pipe operator, 
+# defining an order only prerequisite. Meaning that the 
+# $(XREF) target should be existent (instead of more recent) 
+# in order to build the current target.
+
+# %_sats.html: %.sats
+$(sats_html_files): $(call atshtmlname,%.sats): %.sats
+	cd $(dir $<); \
+	test -d $(XREF) || mkdir -p $(XREF); \
+	$(ATSOPT) --posmark_xref=$(XREF) $(ATSCCFLAGS) --static $(notdir $<) > $(notdir $@); \
+	if [ $$? -ne 0 ]; then \
+          $(RM) $@; \
+          rm $$$$.hack; \
+        fi
+
+# %_dats.html: %.dats
+$(dats_html_files): $(call atshtmlname,%.dats): %.dats
+	cd $(dir $<); \
+	test -d $(XREF) || mkdir -p $(XREF); \
+	$(ATSOPT) --posmark_xref=$(XREF) $(ATSCCFLAGS) --dynamic $(notdir $<) > $(notdir $@); \
+	if [ $$? -ne 0 ]; then \
+          $(RM) $@; \
+          rm $$$$.hack; \
+        fi
+
+#=========================
+
+$(sats_files): %.sats: check-atsenv
+$(dats_files): %.dats: check-atsenv
+
 # xxx.depsats: xxx.sats
 # example
-# Purpose: two targets: .c and .depsats
+# Purpose of using sed: two targets: .c and .depsats
 # sed 's,.*:,SATS/zlog_sats.c SATS/zlog.depsats: ,g' > SATS/zlog.depsats.tmp
 $(sats_dep): %.$(depsats): %.sats
 	$(ATSOPT) $(ATSCCFLAGS) -dep1 -s $< | \
@@ -261,7 +338,7 @@ $(sats_dep): %.$(depsats): %.sats
 
 # xxx.depdats: xxx.sats
 # example
-# Purpose: two targets: .c and .depdats
+# Purpose of using sed: two targets: .c and .depdats
 # sed 's,.*:,TEST/test_zlog_dats.c TEST/test_zlog.depdats: ,g' > TEST/test_zlog.depdats.tmp
 $(dats_dep): %.$(depdats): %.dats
 	$(ATSOPT) $(ATSCCFLAGS) -dep1 -d $< | \
@@ -271,18 +348,24 @@ $(dats_dep): %.$(depdats): %.dats
 #=========================
 
 # xxx.depgcc: xxx.cpp
+# example
+# Purpose of using sed: add path info to the .o target
 $(cxx_dep): %.$(depgcc): %.cpp
 	$(CXX) $(CFLAGS) $(CPPFLAGS) -M $< | \
 	$(SED) 's,\($(notdir $*)\.o\)[ :]*,$(dir $@)\1 $@: ,g' > $@.tmp
 	$(MV) $@.tmp $@
 
 # xxx.depgcc: xxx.c
+# example
+# Purpose of using sed: add path info to the .o target
 $(c_dep) : %.$(depgcc): %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -M $< | \
 	$(SED) 's,\($(notdir $*)\.o\)[ :]*,$(dir $@)\1 $@: ,g' > $@.tmp
 	$(MV) $@.tmp $@
 
 # xxx.depgcc: xxx.c
+# example
+# Purpose of using sed: add path info to the .o target
 $(sats_c_dep) $(dats_c_dep): %.$(depgcc): %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(ATS_CC_INC) -M $< | \
 	$(SED) 's,\($(notdir $*)\.o\)[ :]*,$(dir $@)\1 $@: ,g' > $@.tmp
@@ -295,6 +378,9 @@ $(sats_c_dep) $(dats_c_dep): %.$(depgcc): %.c
 #
 $(ats_obj_files): %.o: %.c
 	$(COMPILE.c) $(ATS_CC_INC) $(OUTPUT_OPTION) $<
+
+
+
 
 
 
