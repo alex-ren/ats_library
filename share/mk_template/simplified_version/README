@@ -1,0 +1,30 @@
+How to use this Makefile.
+
+1. Put the Makefile into the directory where your ats source code resides.
+
+2. Make sure the environment for ats (ATSHOME) is set.
+  The Makefile would check the environment. If ATSHOME not set, it will exit.
+
+3. Simple run the following
+  >> make
+  or
+  >> make all
+  or
+  >> make all TARGET=test.out
+
+  Without specifying the TARGET, the default name for the output is a.out.
+  We can also search the "modify" keyword in the Makefile to find the location
+to specify the name of the output as well as the source files explicitly. Please 
+refer to the comment in the Makefile for details.
+
+4. To generate html files for ats source code, please run
+  >> make html
+
+5. To clean the project, please run
+  >> make clean
+  However the generated html files won't be cleaned. To remove them as well,
+please run
+  >> make cleanall
+
+
+

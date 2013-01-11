@@ -1,0 +1,11 @@
+The makefile template has the following functionalities.
+1. Check whether the environment variable ATSHOME has been set. If not, exit.
+2. make all
+3. make html
+4. make clean
+5. make cleanall
+
+For detail, please refer to the following document
+https://docs.google.com/document/d/1XwpO22R4URCQ03yB84snj5AGtNytmwR3QbQpSeUo-Yc/edit
+
+
