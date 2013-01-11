@@ -12,10 +12,11 @@ How to use this Makefile.
   or
   >> make all TARGET=test.out
 
-  Without specifying the TARGET, the default name for the output is a.out.
-  We can also search the "modify" keyword in the Makefile to find the location
-to specify the name of the output as well as the source files explicitly. Please 
-refer to the comment in the Makefile for details.
+  The Makefile would use all the *.sats and *.dats files in the directory to
+  build the output.  Without specifying the TARGET, the default name for the
+  output is a.out.  We can also search the "modify" keyword in the Makefile
+  to find the location to specify the name of the output as well as the source
+  files explicitly. Please refer to the comment in the Makefile for details.
 
 4. To generate html files for ats source code, please run
   >> make html
@@ -23,7 +24,7 @@ refer to the comment in the Makefile for details.
 5. To clean the project, please run
   >> make clean
   However the generated html files won't be cleaned. To remove them as well,
-please run
+  please run
   >> make cleanall
 
 
