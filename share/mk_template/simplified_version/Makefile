@@ -31,11 +31,9 @@ ifeq ($(ATSUSRQ),"")
 ATSUSRQ="/usr"
 endif # end of [ifeq]
 
-ifeq ($(TARGET),"")
-TARGET="a.out"
-endif # end of [ifeq]
-
 ATSRUNTIME=$(ATSUSRQ)/ccomp/runtime
+
+TARGET?="a.out"
 
 ######
 
@@ -97,6 +95,7 @@ subdirectory = $(patsubst %/module.mk,%,    \
 #= functions for building specific target =================================
 # ------------------------------------------------------
 
+# todo add more functions for building new kinds of target
 # ------------------------------------------------------
 # $(call make-ats_program, program-name, source-file-list)
 define make-ats_program
@@ -197,10 +196,10 @@ CXXFLAGS  += -O0  # no optimization
 all:
 
 #======================================================================
-# todo Modify the following line to specify the source files and the output.
+# todo modify the following line to specify the source files and the output.
 # Source files are seperated by space as specified in the following example.
 # $(eval $(call make-ats_program, outputname, xxx.sats xxx.dats dd/yyy.dats ))
-$(eval $(call make-ats_program, $(TARGET), $(wildcard *.sats) $(wildcard *.dats) $(wildcard *.c) $(wildcard *.cpp)))
+$(eval $(call make-ats_program, $(TARGET), $(wildcard *.sats) $(wildcard *.dats)))
 
 # The following must be after the "include".
 # =targets ========================================
@@ -330,8 +329,6 @@ $(sats_c_dep) $(dats_c_dep): %.$(depgcc): %.c
 	$(SED) 's,\($(notdir $*)\.o\)[ :]*,$(dir $@)\1 $@: ,g' > $@.tmp
 	$(MV) $@.tmp $@
 
-kk:
-	echo $(CC)
 #=========================
 
 # xxx_sats.o: xxx_sats.c
