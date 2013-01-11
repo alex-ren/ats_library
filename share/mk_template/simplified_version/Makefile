@@ -1,9 +1,9 @@
 ##
 ##
-## A Makefile for compiling ATS programs and library
+## A Makefile for compiling ATS programs
 ##
 ## Author: Zhiqiang Ren
-## Date: 08/16/2012
+## Date: 01/10/2013
 
 ######
 
@@ -15,12 +15,6 @@ MV  := mv -f
 RM  := rm -rf
 SED := sed
 
-# todo
-# modify ZLOG_PATH according to your environment
-# ZLOG_PATH := /home/atsuser/programs/zlog-1.2.4/install
-ZLOG_PATH := /home/grad2/aren/programs/zlog-1.2.4/zlog_install
-ZLOG_INC := $(ZLOG_PATH)/include
-ZLOG_LIB := $(ZLOG_PATH)/lib
 
 #==================================
 
@@ -35,6 +29,10 @@ ATSUSRQ="$(ATSHOME)"
 ATSLIBQ=$(ATSUSRQ)
 ifeq ($(ATSUSRQ),"")
 ATSUSRQ="/usr"
+endif # end of [ifeq]
+
+ifeq ($(TARGET),"")
+TARGET="a.out"
 endif # end of [ifeq]
 
 ATSRUNTIME=$(ATSUSRQ)/ccomp/runtime
@@ -79,8 +77,8 @@ endef
 
 # file extension for dependency files ============
 depgcc := depgcc
-depdats := depdats
 depsats := depsats
+depdats := depdats
 
 
 #= general functions =================================
@@ -99,27 +97,35 @@ subdirectory = $(patsubst %/module.mk,%,    \
 #= functions for building specific target =================================
 # ------------------------------------------------------
 
-# todo add more functions for building new targets
 # ------------------------------------------------------
-# $(call make-zlog_test, program-name, source-file-list)
-define make-zlog_test
-  zlog_test  += $1
-  sources += $2
-
-  $(call source-to-object,$2): | check-env
+# $(call make-ats_program, program-name, source-file-list)
+define make-ats_program
+  ats_program += $1
+  sources  += $2
 
   $1: $(call source-to-object,$2)
-	$(CC) -o $$@ $(call source-to-object,$2) \
-          -lzlog -L$(ZLOG_LIB) -pthread
+	$(ATSCC) -o $$@ $$(filter %.o,$$^)
+# todo add extra option (e.g. linking option) if necessary
 endef
 
 # ------------------------------------------------------
-# $(call make-ats_zlog_lib, library-name, source-file-list)
-define make-ats_zlog_lib
-  ats_zlog_lib += $1
+# $(call make-ats_program, program-name, source-file-list)
+define make-c_program
+  c_program += $1
+  sources  += $2
+
+  $1: $(call source-to-object,$2)
+	$(CC) -o $$@ $$(filter %.o,$$^)
+# todo add extra option (e.g. linking option) if necessary
+endef
+
+# ------------------------------------------------------
+# $(call make-library, library-name, source-file-list)
+define make-library
+  library += $1
   sources    += $2
 
-  $(call source-to-object,$2): | check-env
+  $(call source-to-object,$2):
 
   $1: $(call source-to-object,$2)
 	echo $$@
@@ -127,34 +133,20 @@ define make-ats_zlog_lib
 endef
 
 # ------------------------------------------------------
-# $(call make-ats_zlog_program, program-name, source-file-list)
-define make-ats_zlog_program
-  ats_zlog_program += $1
-  sources  += $2
-
-  # The following line uses | to specify that check-env is a special prerequisite
-  $(call source-to-object,$2): | check-env
-
-  $1: $(call source-to-object,$2) $(ats_zlog_lib)
-	$(ATSCC) -o $$@ $$(filter %.o,$$^) \
-          -l$(patsubst lib%.a,%,$(notdir $(ats_zlog_lib))) -L$(dir $(ats_zlog_lib)) \
-          -lzlog -L$(ZLOG_LIB) -pthread
-endef
-
 #= projects macro =================================
 
 # Collect information from each module in these four variables.
 # Initialize them here as simple variables
 # targets
-ats_zlog_lib     := # leave empty
-ats_zlog_program := # leave empty
-zlog_test        := # leave empty
+ats_program := # leave empty
+c_program   := # leave empty
+library     := # leave empty
 
-sources          := # leave empty
+sources     := # leave empty
 
 # ==================================
 
-objects      = $(call source-to-object,$(sources))
+objects   = $(call source-to-object,$(sources))
 
 # sources consist of .cpp, .c, .sats, .dats
 cpp_files = $(filter %.cpp,$(sources))
@@ -194,7 +186,7 @@ dependencies = $(sats_dep) $(dats_dep) $(cxx_dep) $(c_dep) $(sats_c_dep) $(dats_
 # todo
 # Add more directory to the varaible include_dirs as needed.
 # It will affect the "include" directory for compiling C source files.
-include_dirs := $(CWD)/CATS $(ZLOG_INC)
+include_dirs := $(CWD)
 CPPFLAGS  += $(addprefix -I ,$(include_dirs))
 CFLAGS    += -O0  # no optimization
 CXXFLAGS  += -O0  # no optimization
@@ -203,39 +195,28 @@ CXXFLAGS  += -O0  # no optimization
 
 # Target "all" has to appear here before eval
 all:
-# todo add more xx.mk here
-include MISC/try_zlog/module.mk
-include ./module.mk  # for libats_zlog.a
-include TEST/module.mk # for building testing program
+
+#======================================================================
+# todo Modify the following line to specify the source files and the output.
+# Source files are seperated by space as specified in the following example.
+# $(eval $(call make-ats_program, outputname, xxx.sats xxx.dats dd/yyy.dats ))
+$(eval $(call make-ats_program, $(TARGET), $(wildcard *.sats) $(wildcard *.dats) $(wildcard *.c) $(wildcard *.cpp)))
 
 # The following must be after the "include".
 # =targets ========================================
 
 .PHONY: all
-all: $(ats_zlog_lib) $(ats_zlog_program)
+all: $(ats_program) $(c_program) $(library)
 
 .PHONY: html
 html: $(ats_html_files)
 
-.PHONY: zlog_test
-zlog_test: $(zlog_test)
-
-.PHONY: library
-library: $(ats_zlog_lib)
-
-.PHONY: test
-test: $(ats_zlog_program)
-
-.PHONY: showpath
-showpath: check-env
-	@echo "LD_LIBRARY_PATH=\$${LD_LIBRARY_PATH}:$(ZLOG_LIB); export LD_LIBRARY_PATH"
-
 .PHONY: clean
 clean:
 	$(RM) $(objects) \
-        $(ats_zlog_program) \
-        $(ats_zlog_lib) \
-        $(zlog_test) \
+        $(ats_program) \
+        $(c_program) \
+        $(library) \
         $(dependencies) \
         $(ats_c_files)
 
@@ -251,24 +232,6 @@ ifndef ATSHOME
 endif
 ifeq ($(wildcard $(ATSHOME)/bin/atscc), )
 	$(error ATSHOME is not correct.)
-endif
-
-ifneq "$(MAKECMDGOALS)" "clean"
-  ifneq "$(MAKECMDGOALS)" "cleanall"
-    include $(dependencies)
-  endif
-endif
-
-.PHONY: check-env
-check-env:
-ifndef ZLOG_PATH
-	$(error ZLOG_PATH is undefined.)
-endif
-ifeq ($(wildcard $(ZLOG_INC)/zlog.h), )
-	$(error ZLOG_INC is not correct.)
-endif
-ifeq ($(wildcard $(ZLOG_LIB)/libzlog.so), )
-	$(error ZLOG_LIB is not correct.)
 endif
 
 ifneq "$(MAKECMDGOALS)" "clean"
@@ -331,6 +294,7 @@ $(sats_dep): %.$(depsats): %.sats
 	$(SED) 's,.*:,$(call atscname,$<) $@: ,g' > $@.tmp
 	$(MV) $@.tmp $@
 
+
 # xxx.depdats: xxx.sats
 # example
 # Purpose of using sed: two targets: .c and .depdats
@@ -366,6 +330,8 @@ $(sats_c_dep) $(dats_c_dep): %.$(depgcc): %.c
 	$(SED) 's,\($(notdir $*)\.o\)[ :]*,$(dir $@)\1 $@: ,g' > $@.tmp
 	$(MV) $@.tmp $@
 
+kk:
+	echo $(CC)
 #=========================
 
 # xxx_sats.o: xxx_sats.c
