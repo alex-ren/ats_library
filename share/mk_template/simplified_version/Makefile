@@ -108,7 +108,7 @@ define make-ats_program
 endef
 
 # ------------------------------------------------------
-# $(call make-ats_program, program-name, source-file-list)
+# $(call make-c_program, program-name, source-file-list)
 define make-c_program
   c_program += $1
   sources  += $2
