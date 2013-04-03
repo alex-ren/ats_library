@@ -1,0 +1,2 @@
+usage of regexp_test:
+./regexp_test .*#..*ats.* ./

@@ -106,6 +106,18 @@ define make-ats_program
 endef
 
 # ------------------------------------------------------
+# $(call make-ats_program, program-name, source-file-list)
+define make-ats_fsutil_program
+  ats_program += $1
+  sources  += $2
+
+  $1: $(call source-to-object,$2) $(library)
+	$(ATSCC) -o $$@ $$(filter %.o,$$^) \
+          -l$(patsubst lib%.a,%,$(notdir $(library))) -L$(dir $(library))
+
+endef
+
+# ------------------------------------------------------
 # $(call make-c_program, program-name, source-file-list)
 define make-c_program
   c_program += $1
@@ -183,8 +195,8 @@ dependencies = $(sats_dep) $(dats_dep) $(cxx_dep) $(c_dep) $(sats_c_dep) $(dats_
 # todo
 # Add more directory to the varaible include_dirs as needed.
 # It will affect the "include" directory for compiling C source files.
-include_dirs := $(CWD)
-# include_dirs := $(CWD)/CATS
+# include_dirs := $(CWD)
+include_dirs := $(CWD)/CATS
 CPPFLAGS  += $(addprefix -I ,$(include_dirs))
 CFLAGS    += -O0  # no optimization
 CXXFLAGS  += -O0  # no optimization
@@ -198,19 +210,26 @@ all:
 # todo
 # Add more target here. Two options: 1. call eval; 2. use include.
 # The following two lines are two examples.
-# include TEST/module.mk
+include module.mk
+include TEST/module.mk
 # $(eval $(call make-c_program, test02, test02.c))
 # $(eval $(call make-ats_program, $(TARGET), $(wildcard *.sats) $(wildcard *.dats)))
-$(eval $(call make-ats_program, test01, test01.dats add_lib.dats SATS/add_lib.sats))
+# $(eval $(call make-ats_program, test01, test01.dats add_lib.dats SATS/add_lib.sats))
 
 # The following must be after the "include".
 # =targets ========================================
+# All the targets are listed below
+# all, lib, test, html, clean
+# libatsfsutil.a TEST/regexptest
 
 .PHONY: all
 all: $(ats_program) $(c_program) $(library)
 
 .PHONY: lib
 lib: $(library)
+
+.PHONY: test
+test: $(ats_program)
 
 .PHONY: html
 html: $(ats_html_files)

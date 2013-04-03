@@ -124,8 +124,6 @@ define make-library
   library += $1
   sources    += $2
 
-  $(call source-to-object,$2):
-
   $1: $(call source-to-object,$2)
 	echo $$@
 	$(AR) $(ARFLAGS) $$@ $(call source-to-object,$2)
@@ -206,6 +204,9 @@ $(eval $(call make-ats_program, $(TARGET), $(wildcard *.sats) $(wildcard *.dats)
 
 .PHONY: all
 all: $(ats_program) $(c_program) $(library)
+
+.PHONY: lib
+lib: $(library)
 
 .PHONY: html
 html: $(ats_html_files)
