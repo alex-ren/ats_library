@@ -1,6 +1,6 @@
 
 # modify here
-CTEMPLATE_PATH := /home/grad2/aren/programs/ctemplate-2.2
+CTEMPLATE_PATH := $(HOME)/programs/ctemplate-2.2
 CTEMPLATE_INC := $(CTEMPLATE_PATH)/src
 CTEMPLATE_LIB := $(CTEMPLATE_PATH)/.libs
 
